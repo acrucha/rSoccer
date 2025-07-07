@@ -1,7 +1,6 @@
 import numpy as np
 import pygame
-from rsoccer_gym.Render.utils import COLORS, TAG_ID_COLORS
-
+from rsoccer_gym.Render.utils import COLORS, TAG_ID_COLORS, VISION_IDS_COLORS_MAP
 
 class Robot:
     size = 1
@@ -207,6 +206,74 @@ class SSLRobot(Robot):
             ),
         )
 
+class VSSSegmentedRobot(Robot):
+    size = 0.08
+    id_tag_size = 0.03
+    team_tag_size = 0.065
+
+    def __init__(self, x, y, direction, scale, id, team_color):
+        super().__init__(x, y, direction, scale, team_color=team_color)
+        self.id = id
+        self.id_color = VISION_IDS_COLORS_MAP[id]
+
+    def draw_robot(self, screen):
+        rotated_surface = pygame.Surface(
+            (self.size * 2, self.size * 2), pygame.SRCALPHA
+        )
+
+        self.draw_team_tag(rotated_surface)
+        self.draw_id_tags(rotated_surface)
+
+        rotated_surface = pygame.transform.rotate(rotated_surface, -self.direction)
+        new_rect = rotated_surface.get_rect(center=(self.x, self.y))
+
+        screen.blit(rotated_surface, new_rect.topleft)
+
+    def draw_team_tag(self, surface):
+        tag_size = (self.id_tag_size * self.scale, self.team_tag_size * self.scale)
+        tag_offset = (
+            -1 + (self.size - 2 * tag_size[0]) // 2,
+            (self.size - tag_size[1]) // 2,
+        )
+        tag_position = (self.size // 2 + tag_offset[0], self.size // 2 + tag_offset[1])
+
+        pygame.draw.rect(
+            surface,
+            self.team_color,
+            rect=(*tag_position, *tag_size),
+        )
+
+    def draw_id_tags(self, surface):
+        dual_tag_size = (self.id_tag_size * self.scale, self.team_tag_size * self.scale)
+        id_tag_size = (self.id_tag_size * self.scale, self.id_tag_size * self.scale)
+        
+        tag_offset = (self.size - dual_tag_size[1]) // 2
+        tag_position = (self.size + 1, self.size // 2 + tag_offset)
+
+        primary_tag_position = (
+            tag_position[0] + dual_tag_size[0] // 3 - id_tag_size[0] // 2 + tag_offset,
+            tag_position[1] + dual_tag_size[1] // 3 - id_tag_size[1] // 2 - tag_offset,
+        )
+
+        secondary_tag_position = (
+            primary_tag_position[0],
+            primary_tag_position[1] + 2 * dual_tag_size[1] // 3 - id_tag_size[1] // 2 + tag_offset,
+        )
+
+        pygame.draw.rect(
+            surface,
+            self.id_color[0],
+            rect=(*primary_tag_position, *id_tag_size),
+        )
+
+        pygame.draw.rect(
+            surface,
+            self.id_color[1],
+            rect=(*secondary_tag_position, *id_tag_size),
+        )
+
+    def draw(self, screen) -> np.ndarray:
+        self.draw_robot(screen)
 
 if __name__ == "__main__":
     pygame.init()
