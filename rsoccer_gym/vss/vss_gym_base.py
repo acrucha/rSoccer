@@ -209,11 +209,11 @@ class VSSBaseEnv(gym.Env):
         if self.window_surface is None:
             pygame.init()
 
-            if self.render_mode == "human" or self.render_mode == "image":
+            if self.render_mode == "human":
                 pygame.display.init()
                 pygame.display.set_caption("VSS Environment")
                 self.window_surface = pygame.display.set_mode(self.window_size)
-            elif self.render_mode == "rgb_array":
+            elif self.render_mode == "rgb_array" or self.render_mode == "image":
                 self.window_surface = pygame.Surface(self.window_size)
 
         assert (
@@ -224,16 +224,13 @@ class VSSBaseEnv(gym.Env):
             self.clock = pygame.time.Clock()
 
         # Close the window if the user clicks the close button
-        if self.render_mode == "human" or self.render_mode == "image":
+        if self.render_mode == "human":
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     self.close()
             
         if self.render_mode == "image":
             self.image_render()
-            pygame.event.pump()
-            pygame.display.update()
-            self.clock.tick(self.metadata["render_fps"])
         else:
             self._render()
             if self.render_mode == "human":
