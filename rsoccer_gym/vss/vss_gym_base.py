@@ -11,17 +11,17 @@ import gymnasium as gym
 import numpy as np
 import pygame
 
-from rsoccer_gym.Entities import Frame, Robot
+from rsoccer_gym.Entities import Frame, Robot, FrameVSS
 from rsoccer_gym.Render import COLORS, Ball, VSSRenderField, VSSRobot
+from rsoccer_gym.Render.robot import VSSSegmentedRobot
+from rsoccer_gym.Render.utils import VISION_COLORS
 from rsoccer_gym.Simulators.rsim import RSimVSS
 
 
 class VSSBaseEnv(gym.Env):
     metadata = {
-        "render.modes": ["human", "rgb_array"],
-        "render_modes": ["human", "rgb_array"],
+        "render.modes": ["human", "rgb_array", "image"],
         "render_fps": 60,
-        "render.fps": 60,
     }
     NORM_BOUNDS = 1.2
 
@@ -69,6 +69,8 @@ class VSSBaseEnv(gym.Env):
         self.window_size = self.field_renderer.window_size
         self.clock = None
 
+        self.ball_radius = 0.021
+
     def step(self, action):
         self.steps += 1
         # Join agent action with environment actions
@@ -87,6 +89,12 @@ class VSSBaseEnv(gym.Env):
         if self.render_mode == "human":
             self.render()
 
+        if self.render_mode == "image":
+            self.render()
+            observation = np.transpose(
+                np.array(pygame.surfarray.pixels3d(self.window_surface)), axes=(1, 0, 2)
+            )
+
         return observation, reward, done, False, {}
 
     def reset(self, *, seed=None, options=None):
@@ -104,6 +112,44 @@ class VSSBaseEnv(gym.Env):
         if self.render_mode == "human":
             self.render()
         return obs, {}
+
+    def image_render(self):
+        def pos_transform(pos_x, pos_y):
+            return (
+                int(pos_x * self.field_renderer.scale + self.field_renderer.center_x),
+                int(pos_y * self.field_renderer.scale + self.field_renderer.center_y),
+            )
+
+        ## Turn Screen to all black
+        self.window_surface.fill((0,0,0))
+
+        ## Draw Ball
+        pygame.draw.circle(
+            self.window_surface,
+            VISION_COLORS["ORANGE"], 
+            pos_transform(self.frame.ball.x, self.frame.ball.y), 
+            self.ball_radius * self.field_renderer.scale
+        )
+
+        ## Draw Robots
+        for robot in self.frame.robots_blue.values():
+            rbt_x, rbt_y = pos_transform(robot.x, robot.y)
+            rbt = VSSSegmentedRobot(
+                rbt_x, rbt_y, robot.theta, self.field_renderer.scale, robot.id, VISION_COLORS["BLUE"]
+            )
+            rbt.draw(self.window_surface)
+
+        for robot in self.frame.robots_yellow.values():
+            rbt_x, rbt_y = pos_transform(robot.x, robot.y)
+            rbt = VSSSegmentedRobot(
+                rbt_x, rbt_y, robot.theta, self.field_renderer.scale, robot.id, VISION_COLORS["YELLOW"]
+            )
+            rbt.draw(self.window_surface)
+
+        ## Generate np.ndarray from pygame surface
+        np_array_image = pygame.surfarray.array2d(self.window_surface)
+
+        return np_array_image
 
     def _render(self):
         def pos_transform(pos_x, pos_y):
@@ -163,7 +209,7 @@ class VSSBaseEnv(gym.Env):
         if self.window_surface is None:
             pygame.init()
 
-            if self.render_mode == "human":
+            if self.render_mode == "human" or self.render_mode == "image":
                 pygame.display.init()
                 pygame.display.set_caption("VSS Environment")
                 self.window_surface = pygame.display.set_mode(self.window_size)
@@ -176,15 +222,29 @@ class VSSBaseEnv(gym.Env):
 
         if self.clock is None:
             self.clock = pygame.time.Clock()
-        self._render()
-        if self.render_mode == "human":
+
+        # Close the window if the user clicks the close button
+        if self.render_mode == "human" or self.render_mode == "image":
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    self.close()
+            
+        if self.render_mode == "image":
+            np_array_image = self.image_render()
             pygame.event.pump()
             pygame.display.update()
             self.clock.tick(self.metadata["render_fps"])
-        elif self.render_mode == "rgb_array":
-            return np.transpose(
-                np.array(pygame.surfarray.pixels3d(self.window_surface)), axes=(1, 0, 2)
-            )
+            return np_array_image
+        else:
+            self._render()
+            if self.render_mode == "human":
+                pygame.event.pump()
+                pygame.display.update()
+                self.clock.tick(self.metadata["render_fps"])
+            elif self.render_mode == "rgb_array":
+                return np.transpose(
+                    np.array(pygame.surfarray.pixels3d(self.window_surface)), axes=(1, 0, 2)
+                )
 
     def close(self):
         if self.window_surface is not None:
