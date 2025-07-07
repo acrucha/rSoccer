@@ -88,8 +88,7 @@ class VSSBaseEnv(gym.Env):
         reward, done = self._calculate_reward_and_done()
         if self.render_mode == "human":
             self.render()
-
-        if self.render_mode == "image":
+        elif self.render_mode == "image":
             self.render()
             observation = np.transpose(
                 np.array(pygame.surfarray.pixels3d(self.window_surface)), axes=(1, 0, 2)
@@ -111,6 +110,11 @@ class VSSBaseEnv(gym.Env):
         obs = self._frame_to_observations()
         if self.render_mode == "human":
             self.render()
+        elif self.render_mode == "image":
+            self.render()
+            obs = np.transpose(
+                np.array(pygame.surfarray.pixels3d(self.window_surface)), axes=(1, 0, 2)
+            )
         return obs, {}
 
     def image_render(self):
@@ -124,11 +128,12 @@ class VSSBaseEnv(gym.Env):
         self.window_surface.fill((0,0,0))
 
         ## Draw Ball
+        radius = self.ball_radius - np.random.uniform(0, 0.003)
         pygame.draw.circle(
             self.window_surface,
             VISION_COLORS["ORANGE"], 
             pos_transform(self.frame.ball.x, self.frame.ball.y), 
-            self.ball_radius * self.field_renderer.scale
+            radius * self.field_renderer.scale
         )
 
         ## Draw Robots
@@ -145,11 +150,6 @@ class VSSBaseEnv(gym.Env):
                 rbt_x, rbt_y, robot.theta, self.field_renderer.scale, robot.id, VISION_COLORS["YELLOW"]
             )
             rbt.draw(self.window_surface)
-
-        ## Generate np.ndarray from pygame surface
-        np_array_image = pygame.surfarray.array2d(self.window_surface)
-
-        return np_array_image
 
     def _render(self):
         def pos_transform(pos_x, pos_y):
@@ -230,11 +230,10 @@ class VSSBaseEnv(gym.Env):
                     self.close()
             
         if self.render_mode == "image":
-            np_array_image = self.image_render()
+            self.image_render()
             pygame.event.pump()
             pygame.display.update()
             self.clock.tick(self.metadata["render_fps"])
-            return np_array_image
         else:
             self._render()
             if self.render_mode == "human":

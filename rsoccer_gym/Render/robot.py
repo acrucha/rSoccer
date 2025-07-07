@@ -241,6 +241,7 @@ class VSSSegmentedRobot(Robot):
             surface,
             self.team_color,
             rect=(*tag_position, *tag_size),
+            border_radius=np.random.randint(5, 15)
         )
 
     def draw_id_tags(self, surface):
@@ -264,12 +265,14 @@ class VSSSegmentedRobot(Robot):
             surface,
             self.id_color[0],
             rect=(*primary_tag_position, *id_tag_size),
+            border_radius=np.random.randint(3, 8)
         )
 
         pygame.draw.rect(
             surface,
             self.id_color[1],
             rect=(*secondary_tag_position, *id_tag_size),
+            border_radius=np.random.randint(3, 8)
         )
 
     def draw(self, screen) -> np.ndarray:
