@@ -88,6 +88,20 @@ class RSim:
 
 
 class RSimVSS(RSim):
+    def __init__(
+        self,
+        field_type: int,
+        n_robots_blue: int,
+        n_robots_yellow: int,
+        time_step_ms: int,
+    ):
+        super().__init__(
+            field_type=field_type,
+            n_robots_blue=n_robots_blue,
+            n_robots_yellow=n_robots_yellow,
+            time_step_ms=time_step_ms,
+        )
+        
     def send_commands(self, commands):
         sim_commands = np.zeros(
             (self.n_robots_blue + self.n_robots_yellow, 2), dtype=np.float64)
